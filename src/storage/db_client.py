@@ -65,8 +65,8 @@ def save_anomaly_record(conn: psycopg2.connect, anomaly_data: dict) -> bool:
         """ % (
             anomaly_data["symbol"],
             anomaly_data["price"],
-            anomaly_data["timestamp"],
-            anomaly_data["volume"]
+            anomaly_data.get("volume", 0.0),
+            anomaly_data["detected_at"]
         ))
 
         conn.commit()
