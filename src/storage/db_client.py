@@ -83,7 +83,7 @@ def fetch_historical_data(conn: psycopg2.connect, symbol: str, limit: int = 100)
         return pd.DataFrame()
 
     query = """
-        SELECT symbol, price, volume, detected_at FROM crypto_prices
+        SELECT symbol, price, volume, timestamp FROM crypto_prices
         WHERE symbol = %s
         ORDER BY timestamp DESC
         LIMIT %s;
