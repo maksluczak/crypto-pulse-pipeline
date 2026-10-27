@@ -40,7 +40,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: crypto_db
+      POSTGRES_DB: CryptoDb
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -69,6 +69,12 @@ services:
       _AIRFLOW_WWW_USER_USERNAME: 'admin'
       _AIRFLOW_WWW_USER_PASSWORD: 'admin'
       AIRFLOW_UID: '50000'
+      PYTHONPATH: '/opt/airflow'
+      _PIP_ADDITIONAL_REQUIREMENTS: "pyspark==3.5.1 delta-spark==3.1.0 scikit-learn==1.5.0 pandas==2.2.1 numpy==1.26.4 psycopg2-binary==2.9.9 PyYAML==6.0.1 kafka-python==2.0.3 websockets==12.0"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./src:/opt/airflow/src
+      - ./requirements.txt:/opt/airflow/requirements.txt
     command: version
 
   airflow-webserver:
@@ -80,6 +86,12 @@ services:
         condition: service_completed_successfully
     environment:
       <<: *airflow-common-env
+      PYTHONPATH: '/opt/airflow'
+      _PIP_ADDITIONAL_REQUIREMENTS: "pyspark==3.5.1 delta-spark==3.1.0 scikit-learn==1.5.0 pandas==2.2.1 numpy==1.26.4 psycopg2-binary==2.9.9 PyYAML==6.0.1 kafka-python==2.0.3 websockets==12.0"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./src:/opt/airflow/src
+      - ./requirements.txt:/opt/airflow/requirements.txt
     ports:
       - "8090:8080"
     command: webserver
@@ -93,6 +105,12 @@ services:
         condition: service_completed_successfully
     environment:
       <<: *airflow-common-env
+      PYTHONPATH: '/opt/airflow'
+      _PIP_ADDITIONAL_REQUIREMENTS: "pyspark==3.5.1 delta-spark==3.1.0 scikit-learn==1.5.0 pandas==2.2.1 numpy==1.26.4 psycopg2-binary==2.9.9 PyYAML==6.0.1 kafka-python==2.0.3 websockets==12.0"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./src:/opt/airflow/src
+      - ./requirements.txt:/opt/airflow/requirements.txt
     command: scheduler
 
 volumes:
