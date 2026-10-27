@@ -1,54 +1,76 @@
 import asyncio
 import json
+import logging
 import websockets
 from kafka import KafkaProducer
-from kafka.errors import KafkaError
+from src.config import KAFKA_SERVER, SYMBOLS, TOPIC_TRADES
+from src.logging import setup_logging
 
-TOPIC_NAME = 'crypto-raw-prices'
+logger = logging.getLogger(__name__)
+
+def build_binance_url(symbols: list) -> str:
+    streams = []
+    for symbol in symbols:
+        streams.append(symbol.toLower() + "@aggTrade")
+    return "wss://stream.binance.com:9443/stream?streams=" + "/".join(streams)
 
 def create_kafka_producer() -> KafkaProducer:
-    try:
-        producer = KafkaProducer(
-            bootstrap_servers = ['localhost:9092'],
-            value_serializer = lambda v: json.dumps(v).encode('utf-8')
-        )
-        return producer
-    except Exception as ex:
-        raise ex
+    producer = KafkaProducer(
+        bootstrap_servers = [KAFKA_SERVER],
+        value_serializer = lambda v: json.dumps(v).encode('utf-8')
+    )
+    return producer
 
-def parse_ticker_data(raw_message: str) -> dict:
-    parsed_data = json.loads(raw_message)
-    return {
-        "symbol": str(parsed_data["data"]["s"]).upper(),
-        "price": float(parsed_data["data"]["c"]),
-        "volume": float(parsed_data["data"]["v"]),
-        "timestamp": int(parsed_data["data"]["T"])
-    }
-
-def send_to_kafka(producer: KafkaProducer, topic_name: str, data: dict) -> None:
+def parse_trade(raw_message: str) -> dict | None:
     try:
-        producer.send(topic_name, data)
-        producer.flush()
-    except KafkaError as e:
-        print(e)
+        data = json.loads(raw_message)["data"]
+        trade = {
+            "symbol": str(data["s"]),
+            "price": float(data["p"]),
+            "quantity": float(data["q"]),
+            "trade_time": int(data["T"])
+        }
+
+        if trade["price"] <= 0 or trade["quantity"] <= 0:
+            return None
+        return trade
+    except (KeyError, ValueError, TypeError) as e:
+        logger.warning(f"Invalid message: {e}")
+        return None
+
+def send_to_kafka(producer: KafkaProducer, trade: dict) -> None:
+    producer.send(TOPIC_TRADES, key = trade["symbol"], value = trade)
 
 async def run_producer_loop() -> None:
-    binance_url = "wss://[stream.binance.com:9443/stream?streams=btcusdt@ticker/ethusdt@ticker/solusdt@ticker]"
+    url = build_binance_url(SYMBOLS)
     producer = create_kafka_producer()
+    wait_seconds = 1
+    send_count = 0
 
     while True:
         try:
-            async with websockets.connect(binance_url) as websocket:
+            async with websockets.connect(url) as websocket:
+                logger.info("Connected to Binance API")
                 while True:
-                    raw_data = await websocket.recv()
-                    message = parse_ticker_data(raw_data)
-                    send_to_kafka(producer, TOPIC_NAME, message)
-        except websockets.exceptions.ConnectionClosed as e:
-            print(e)
-            await asyncio.sleep(5)
+                    raw_message = await websocket.recv()
+                    trade = parse_trade(raw_message)
+                    if trade is None:
+                        continue
+                    send_to_kafka(producer, trade)
+                    send_count += 1
+                    if send_count % 1000 == 0:
+                        logger.info(f"Sent {send_count} trades")
         except Exception as e:
-            print(e)
-            await asyncio.sleep(5)
+            logger.error(
+                f"Failed to connect to Binance API: {e}. Trying again in {wait_seconds} seconds."
+            )
+            await asyncio.sleep(wait_seconds)
+            wait_seconds = min(wait_seconds * 2, 60)
 
 if __name__ == "__main__":
-    asyncio.run(run_producer_loop())
+    setup_logging()
+    try:
+        asyncio.run(run_producer_loop())
+    except KeyboardInterrupt:
+        logger.info("Shutting down")
+        pass
