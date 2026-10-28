@@ -68,3 +68,6 @@ airflow_db_data/
 ehthumbs.db
 Thumbs.db
 Desktop.ini
+
+models/
+checkpoints/
