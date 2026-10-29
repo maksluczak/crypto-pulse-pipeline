@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 def build_binance_url(symbols: list) -> str:
     streams = []
     for symbol in symbols:
-        streams.append(symbol.toLower() + "@aggTrade")
+        streams.append(symbol.lower() + "@aggTrade")
     return "wss://stream.binance.com:9443/stream?streams=" + "/".join(streams)
 
 def create_kafka_producer() -> KafkaProducer:
