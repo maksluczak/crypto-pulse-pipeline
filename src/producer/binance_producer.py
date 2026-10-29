@@ -4,7 +4,7 @@ import logging
 import websockets
 from kafka import KafkaProducer
 from src.config import KAFKA_SERVER, SYMBOLS, TOPIC_TRADES
-from src.logging import setup_logging
+from src.logger import setup_logging
 
 logger = logging.getLogger(__name__)
 
