@@ -5,6 +5,7 @@ from pyspark.sql import functions as F
 from pyspark.sql.types import DoubleType, LongType, StringType, StructField, StructType
 from src.config import KAFKA_SERVER, TOPIC_TRADES
 from src.logger import setup_logging
+from src.storage.db_client import get_db_connection, save_candle
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +58,20 @@ def aggregate_per_minute(trades_df: DataFrame) -> DataFrame:
             "symbol", "avg_price", "min_price", "max_price", "trade_count"
         )
 
+def process_batch(batch_df: DataFrame, batch_id) -> None:
+    rows = batch_df.collect()
+    if len(rows) == 0:
+        return
+
+    conn = get_db_connection()
+    try:
+        for row in rows:
+            candle = row.asDict()
+            save_candle(conn, candle)
+            logger.info(f"Package {batch_id}: {len(candle)} candles saved")
+    finally:
+        conn.close()
+
 def main():
     setup_logging()
     spark = create_spark_session()
@@ -66,11 +81,11 @@ def main():
 
     query = candles_df.writeStream \
         .outputMode("append") \
-        .format("console") \
-        .option("truncate", "false") \
+        .forEach(process_batch) \
+        .option("checkpointLocation", "checkpoints/candles") \
+        .trigger(processingTime = "20 seconds") \
         .start()
     query.awaitTermination()
-
 
 if __name__ == "__main__":
     main()
