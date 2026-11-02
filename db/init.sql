@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS crypto_candles (
 
 CREATE TABLE IF NOT EXISTS crypto_anomalies (
     id SERIAL PRIMARY KEY,
-    symbol TEXY NOT NULL,
+    symbol TEXT NOT NULL,
     minute_start TIMESTAMP NOT NULL,
     price DOUBLE PRECISION NOT NULL,
     price_change_pct DOUBLE PRECISION,

@@ -17,6 +17,7 @@ def build_binance_url(symbols: list) -> str:
 def create_kafka_producer() -> KafkaProducer:
     producer = KafkaProducer(
         bootstrap_servers = [KAFKA_SERVER],
+        key_serializer = lambda k: k.encode('utf-8'),
         value_serializer = lambda v: json.dumps(v).encode('utf-8')
     )
     return producer
