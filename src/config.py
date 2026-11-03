@@ -9,7 +9,7 @@ DB_NAME = os.getenv("DB_NAME", "CryptoDb")
 DB_USER = os.getenv("DB_USER", "postgres")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "postgres")
 
-KAFKA_SERVER = os.getenv("KAFKA_SERVER", "kafka:9094")
+KAFKA_SERVER = os.getenv("KAFKA_SERVER", "localhost:9094")
 TOPIC_TRADES = "crypto_trades"
 
 SYMBOLS = ["BTCUSDT", "ETHUSDT", "SOLUSDT"]

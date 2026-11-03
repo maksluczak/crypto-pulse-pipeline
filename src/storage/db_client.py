@@ -40,9 +40,7 @@ def get_previous_price(conn: psycopg2.connect, symbol: str, minute_start: str) -
     cursor.execute("""
         SELECT avg_price FROM crypto_candles
         WHERE symbol = %s
-        AND minute_start = %s
-        ORDER BY avg_price DESC
-        LIMIT 1;
+        AND minute_start = %s::timestamp - INTERVAL '1 minute';
     """, (
         symbol,
         minute_start
@@ -76,7 +74,7 @@ def get_candles_for_training(conn: psycopg2.connect, symbol: str, days: int) -> 
     cursor.execute("""
         SELECT minute_start, avg_price, min_price, max_price, volume FROM crypto_candles
         WHERE symbol = %s AND minute_start >= NOW() - INTERVAL '1 day' * %s
-        ORDER BY minute_start DESC;
+        ORDER BY minute_start ASC;
     """, (
         symbol,
         days
@@ -86,12 +84,12 @@ def get_candles_for_training(conn: psycopg2.connect, symbol: str, days: int) -> 
     columns = ["minute_start", "avg_price", "min_price", "max_price", "volume"]
     return pd.DataFrame.from_records(rows, columns = columns)
 
-def get_recent_candles(conn: psycopg2.connect, symbol: str, minutes: int) -> pd.DataFrame:
-    cursor = conn.cursor()
+def get_recent_candles(conn: psycopg2.connect, symbol: str, minutes: int) -> list:
+    cursor = conn.cursor(cursor_factory = RealDictCursor)
     cursor.execute("""
         SELECT minute_start, avg_price, min_price, max_price, volume, trade_count FROM crypto_candles
         WHERE symbol = %s AND minute_start >= NOW() - INTERVAL '1 minute' * %s
-        ORDER BY minute_start DESC;
+        ORDER BY minute_start ASC;
     """, (
         symbol,
         minutes
@@ -105,7 +103,7 @@ def get_recent_anomalies(conn: psycopg2.connect, limit: int) -> list:
     cursor.execute("""
         SELECT * FROM crypto_anomalies ORDER BY detected_at DESC LIMIT %s
     """, (
-        limit
+        limit,
     ))
     rows = cursor.fetchall()
     cursor.close()

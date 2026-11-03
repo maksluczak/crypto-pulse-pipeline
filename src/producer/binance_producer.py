@@ -45,28 +45,34 @@ def send_to_kafka(producer: KafkaProducer, trade: dict) -> None:
 async def run_producer_loop() -> None:
     url = build_binance_url(SYMBOLS)
     producer = create_kafka_producer()
-    wait_seconds = 1
+    wait_seconds = 5
     send_count = 0
 
-    while True:
-        try:
-            async with websockets.connect(url) as websocket:
-                logger.info("Connected to Binance API")
-                while True:
-                    raw_message = await websocket.recv()
-                    trade = parse_trade(raw_message)
-                    if trade is None:
-                        continue
-                    send_to_kafka(producer, trade)
-                    send_count += 1
-                    if send_count % 1000 == 0:
-                        logger.info(f"Sent {send_count} trades")
-        except Exception as e:
-            logger.error(
-                f"Failed to connect to Binance API: {e}. Trying again in {wait_seconds} seconds."
-            )
-            await asyncio.sleep(wait_seconds)
-            wait_seconds = min(wait_seconds * 2, 60)
+    try:
+        while True:
+            try:
+                async with websockets.connect(url) as websocket:
+                    logger.info("Connected to Binance API")
+                    while True:
+                        raw_message = await websocket.recv()
+                        trade = parse_trade(raw_message)
+                        if trade is None:
+                            continue
+                        send_to_kafka(producer, trade)
+                        wait_seconds = 5
+                        send_count += 1
+                        if send_count % 1000 == 0:
+                            logger.info(f"Sent {send_count} trades")
+            except Exception as e:
+                logger.error(
+                    f"Producer error: {e}. Trying again in {wait_seconds} seconds."
+                )
+                await asyncio.sleep(wait_seconds)
+                wait_seconds = min(wait_seconds * 2, 60)
+    finally:
+        producer.flush()
+        producer.close()
+        logger.info("Producer closed")
 
 if __name__ == "__main__":
     setup_logging()

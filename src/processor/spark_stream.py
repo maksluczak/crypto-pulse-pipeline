@@ -1,6 +1,5 @@
 import logging
-from pandas import DataFrame
-from pyspark.sql import SparkSession
+from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql import functions as F
 from pyspark.sql.types import DoubleType, LongType, StringType, StructField, StructType
 from src.config import KAFKA_SERVER, TOPIC_TRADES
@@ -33,7 +32,7 @@ def read_from_kafka(spark: SparkSession) -> DataFrame:
         .format("kafka") \
         .option("kafka.bootstrap.servers", KAFKA_SERVER) \
         .option("subscribe", TOPIC_TRADES) \
-        .option("settingOffsets", "latest") \
+        .option("startingOffsets", "latest") \
         .load()
 
 def parse_trades(raw_df: DataFrame) -> DataFrame:
@@ -55,10 +54,10 @@ def aggregate_per_minute(trades_df: DataFrame) -> DataFrame:
         ) \
         .select(
             F.date_format("window.start", "yyyy-MM-dd HH:mm:ss").alias("minute_start"),
-            "symbol", "avg_price", "min_price", "max_price", "trade_count"
+            "symbol", "avg_price", "min_price", "max_price", "volume", "trade_count"
         )
 
-def process_batch(batch_df: DataFrame, batch_id) -> None:
+def process_batch(batch_df: DataFrame, batch_id: int) -> None:
     rows = batch_df.collect()
     if len(rows) == 0:
         return
@@ -68,7 +67,8 @@ def process_batch(batch_df: DataFrame, batch_id) -> None:
         for row in rows:
             candle = row.asDict()
             save_candle(conn, candle)
-            logger.info(f"Package {batch_id}: {len(candle)} candles saved")
+        conn.commit()
+        logger.info(f"Batch {batch_id}: {len(rows)} candles saved")
     finally:
         conn.close()
 
@@ -81,7 +81,7 @@ def main():
 
     query = candles_df.writeStream \
         .outputMode("append") \
-        .forEach(process_batch) \
+        .foreachBatch(process_batch) \
         .option("checkpointLocation", "checkpoints/candles") \
         .trigger(processingTime = "20 seconds") \
         .start()

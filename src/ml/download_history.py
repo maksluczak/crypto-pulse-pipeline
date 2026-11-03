@@ -18,9 +18,9 @@ def download_klines(symbol: str, start_ms: int, end_ms: int) -> list:
             "interval": "1m",
             "startTime": start_ms,
             "endTime": end_ms,
-            "limit": 100
+            "limit": 1000
         }
-        response = requests.get(BINANCE_KLINES_URL, params = params)
+        response = requests.get(BINANCE_KLINES_URL, params = params, timeout = 10)
         response.raise_for_status()
         klines = response.json()
         if len(klines) == 0:
