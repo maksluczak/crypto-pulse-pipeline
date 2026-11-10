@@ -8,7 +8,7 @@ def make_candles(minutes: list, prices: list) -> pd.DataFrame:
     rows = []
     for minute, price in zip(minutes, prices):
         rows.append({
-            "minute_start": start + pd.Timedelta(minute),
+            "minute_start": start + pd.Timedelta(minutes = minute),
             "avg_price": price,
             "min_price": price - 1,
             "max_price": price + 1,
@@ -33,7 +33,7 @@ def test_model_marks_huge_jump_as_anomaly():
     training_data = pd.DataFrame({
         "price_change_pct": rng.normal(0, 0.05, 2000),
         "range_pct": rng.uniform(0.01, 0.2, 2000),
-        "volume": rng.uniform(1, 20, 2000),
+        "volume": rng.uniform(1, 20, 2000)
     }) [FEATURE_NAMES]
     model = train_model(training_data)
     huge_jump = pd.DataFrame([[5.0, 6.0, 500.0]], columns = FEATURE_NAMES)

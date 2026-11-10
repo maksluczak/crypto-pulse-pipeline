@@ -16,10 +16,8 @@ def build_training_data(candles_df: DataFrame) -> DataFrame:
     previous_candle = None
     rows = []
     for _, candle in candles_df.iterrows():
-        if previous_candle is None:
-            previous_candle = candle
-        else:
-            time_gap = previous_candle["minute_start"] - candle["minute_start"]
+        if previous_candle is not None:
+            time_gap = candle["minute_start"] - previous_candle["minute_start"]
             if time_gap == Timedelta(minutes = 1):
                 candle_feature = make_features(
                     candle["avg_price"],
@@ -29,7 +27,7 @@ def build_training_data(candles_df: DataFrame) -> DataFrame:
                     candle["volume"]
                 )
                 rows.append(candle_feature)
-            previous_candle = candle
+        previous_candle = candle
     return DataFrame(rows, columns = FEATURE_NAMES)
 
 def train_model(training_data: DataFrame) -> IsolationForest:
