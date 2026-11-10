@@ -35,6 +35,6 @@ def test_model_marks_huge_jump_as_anomaly():
         "range_pct": rng.uniform(0.01, 0.2, 2000),
         "volume": rng.uniform(1, 20, 2000),
     }) [FEATURE_NAMES]
-    model = train_model()
+    model = train_model(training_data)
     huge_jump = pd.DataFrame([[5.0, 6.0, 500.0]], columns = FEATURE_NAMES)
     assert model.predict(huge_jump)[0] == -1
