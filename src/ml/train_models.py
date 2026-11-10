@@ -1,12 +1,12 @@
 import logging
 import os
 import joblib
-import psycopg2
 from pandas import DataFrame, Timedelta
 from sklearn.ensemble import IsolationForest
-from src.config import MODELS_DIR
+from src.config import MODELS_DIR, SYMBOLS
+from src.logger import setup_logging
 from src.ml.features import make_features, FEATURE_NAMES
-from src.storage.db_client import get_candles_for_training
+from src.storage.db_client import get_candles_for_training, get_db_connection
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +46,7 @@ def save_model(model: IsolationForest, symbol: str) -> str:
     return model_path
 
 def train_model_for_symbol(symbol: str, days: int = 30) -> bool | None:
-    conn = psycopg2.connect()
+    conn = get_db_connection()
     try:
         candles_df = get_candles_for_training(conn, symbol, days)
     finally:
@@ -63,3 +63,8 @@ def train_model_for_symbol(symbol: str, days: int = 30) -> bool | None:
     anomalies_count = (model.predict(training_data) == -1).sum()
     logger.info(f"{symbol}: saved {model_path}, {anomalies_count} anomalies in {days} days")
     return True
+
+if __name__ == "__main__":
+    setup_logging()
+    for symbol in SYMBOLS:
+        train_model_for_symbol(symbol)
