@@ -18,14 +18,17 @@ def make_candles(minutes: list, prices: list) -> pd.DataFrame:
 
 def test_first_candle_has_no_features():
     candles = make_candles([0, 1, 2], [100.0, 101.0, 102.0])
+
     assert len(build_training_data(candles)) == 2
 
 def test_columns_match_feature_names():
     candles = make_candles([0, 1], [100.0, 101.0])
+
     assert list(build_training_data(candles).columns) == FEATURE_NAMES
 
 def test_gap_in_time_is_skipped():
     candles = make_candles([0, 1, 60], [100.0, 101.0, 200.0])
+
     assert len(build_training_data(candles)) == 1
 
 def test_model_marks_huge_jump_as_anomaly():
@@ -37,4 +40,5 @@ def test_model_marks_huge_jump_as_anomaly():
     }) [FEATURE_NAMES]
     model = train_model(training_data)
     huge_jump = pd.DataFrame([[5.0, 6.0, 500.0]], columns = FEATURE_NAMES)
+
     assert model.predict(huge_jump)[0] == -1
