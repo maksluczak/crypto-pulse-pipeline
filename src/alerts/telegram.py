@@ -1,8 +1,8 @@
 import logging
 import time
-
 import requests
 from src.config import TELEGRAM_TOKEN, TELEGRAM_CHAT_ID
+from src.logger import setup_logging
 
 logger = logging.getLogger(__name__)
 
@@ -47,3 +47,6 @@ def send_anomaly_alert(anomaly: dict) -> None:
         return
     if send_telegram_message(text_message):
         last_alert_time[symbol] = now
+
+if __name__ == "__main__":
+    setup_logging()

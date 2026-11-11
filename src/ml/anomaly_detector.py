@@ -3,7 +3,9 @@ import os
 import joblib
 import psycopg2
 from pandas import DataFrame
+from src.alerts.telegram import send_anomaly_alert
 from src.config import SYMBOLS, MODELS_DIR
+from src.logger import setup_logging
 from src.ml.features import FEATURE_NAMES, make_features
 from src.storage.db_client import get_previous_price, get_db_connection, save_candle, save_anomaly
 
@@ -71,8 +73,10 @@ def process_batch(batch_df: DataFrame, batch_id: int) -> None:
 
     for anomaly in new_anomalies:
         logger.warning(f"Anomaly detected: {anomaly}")
+        send_anomaly_alert(anomaly)
 
     logger.info(f"Batch {batch_id}: {len(rows)} candles, {len(new_anomalies)} anomalies")
 
 if __name__ == "__main__":
+    setup_logging()
     load_models()
