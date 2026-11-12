@@ -28,9 +28,10 @@ def send_telegram_message(text: str) -> bool:
         logger.warning("Telegram is not configured, skipping message")
         return False
 
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage?chat_id={TELEGRAM_CHAT_ID}&text={text}"
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    payload = {"chat_id": TELEGRAM_CHAT_ID, "text": text}
     try:
-        response = requests.post(url, timeout = 10)
+        response = requests.post(url, json = payload, timeout = 10)
         response.raise_for_status()
         return True
     except requests.RequestException as e:

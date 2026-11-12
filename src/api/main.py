@@ -14,7 +14,8 @@ def get_symbols() -> list:
 
 @app.get("/prices/{symbol}")
 def get_prices(symbol: str, minutes: int = 60) -> list | None:
-    if symbol.upper() not in SYMBOLS:
+    symbol = symbol.upper()
+    if symbol not in SYMBOLS:
         raise HTTPException(status_code = 404, detail = "Unknown symbol: " + symbol)
 
     if minutes < 1 or minutes > 1440:
@@ -28,7 +29,7 @@ def get_prices(symbol: str, minutes: int = 60) -> list | None:
         conn.close()
 
 @app.get("/anomalies")
-def get_anomalies(limit: int) -> list | None:
+def get_anomalies(limit: int = 20) -> list | None:
     if limit < 1 or limit > 200:
         raise HTTPException(status_code = 400, detail = "Limit must be between 1 and 200")
 

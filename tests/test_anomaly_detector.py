@@ -40,3 +40,15 @@ def test_check_candle_returns_anomaly(monkeypatch):
 
     assert anomaly["price"] == 110.0
     assert round(anomaly["price_change_pct"], 2) == 10.0
+
+def test_big_price_jump_is_anomaly_even_if_model_says_normal(monkeypatch):
+    anomaly_detector.models["BTCUSDT"] = FakeModel(1)
+    monkeypatch.setattr(anomaly_detector, "get_previous_price", lambda c, s, m: 100.0)
+
+    assert check_candle(None, CANDLE) is not None
+
+def test_small_change_uses_model(monkeypatch):
+    anomaly_detector.models["BTCUSDT"] = FakeModel(1)
+    monkeypatch.setattr(anomaly_detector, "get_previous_price", lambda c, s, m: 109.9)
+
+    assert check_candle(None, CANDLE) is None

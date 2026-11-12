@@ -3,14 +3,14 @@ import os
 import joblib
 import psycopg2
 from pandas import DataFrame
-from src.alerts.telegram import send_anomaly_alert
 from src.config import SYMBOLS, MODELS_DIR
 from src.logger import setup_logging
 from src.ml.features import FEATURE_NAMES, make_features
-from src.storage.db_client import get_previous_price, get_db_connection, save_candle, save_anomaly
+from src.storage.db_client import get_previous_price
 
 logger = logging.getLogger(__name__)
 
+PRICE_JUMP_PCT = 1.0
 models = {}
 
 def load_models() -> int:
@@ -30,6 +30,9 @@ def is_anomaly(symbol: str, features: tuple) -> bool:
     features_df = DataFrame([features], columns = FEATURE_NAMES)
     return model.predict(features_df)[0] == -1
 
+def is_price_jump(price_change_pct: float) -> bool:
+    return abs(price_change_pct) >= PRICE_JUMP_PCT
+
 def check_candle(conn: psycopg2.connect, candle: dict) -> dict | None:
     previous_price = get_previous_price(conn, candle["symbol"], candle["minute_start"])
     if previous_price is None:
@@ -42,7 +45,8 @@ def check_candle(conn: psycopg2.connect, candle: dict) -> dict | None:
         candle["max_price"],
         candle["volume"]
     )
-    if not is_anomaly(candle["symbol"], features):
+
+    if not is_price_jump(features[0]) and not is_anomaly(candle["symbol"], features):
         return None
 
     return {
@@ -53,30 +57,5 @@ def check_candle(conn: psycopg2.connect, candle: dict) -> dict | None:
         "volume": candle["volume"]
     }
 
-def process_batch(batch_df: DataFrame, batch_id: int) -> None:
-    rows = batch_df.collect()
-    if len(rows) == 0:
-        return
-
-    new_anomalies = []
-    conn = get_db_connection()
-    try:
-        for row in rows:
-            candle = row.asDict()
-            save_candle(conn, candle)
-            anomaly = check_candle(conn, candle)
-            if anomaly is not None and save_anomaly(conn, anomaly):
-                new_anomalies.append(anomaly)
-        conn.commit()
-    finally:
-        conn.close()
-
-    for anomaly in new_anomalies:
-        logger.warning(f"Anomaly detected: {anomaly}")
-        send_anomaly_alert(anomaly)
-
-    logger.info(f"Batch {batch_id}: {len(rows)} candles, {len(new_anomalies)} anomalies")
-
 if __name__ == "__main__":
     setup_logging()
-    load_models()
