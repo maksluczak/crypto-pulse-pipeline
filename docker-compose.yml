@@ -60,6 +60,28 @@ services:
     depends_on:
       - db
 
+  airflow:
+    image: apache/airflow:2.10.5-python3.11
+    profiles: [airflow]
+    command: standalone
+    ports:
+      - "8090:8080"
+    environment:
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      PYTHONPATH: /opt/airflow
+      DB_HOST: db
+      DB_PORT: "5432"
+      MODELS_DIR: /opt/airflow/models
+      TELEGRAM_TOKEN: ${TELEGRAM_TOKEN}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID}
+      _PIP_ADDITIONAL_REQUIREMENTS: "psycopg2-binary==2.9.9 python-dotenv==1.0.1 scikit-learn==1.5.0 requests==2.33.0"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./src:/opt/airflow/src
+      - ./models:/opt/airflow/models
+    depends_on:
+      - db
+
 volumes:
   kafka_data:
   postgres_data:
